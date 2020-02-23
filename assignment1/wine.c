@@ -32,6 +32,28 @@ void dataPrint(struct data p)
     }
 }
 
+void dataPrint_file(struct data p, FILE* fp)
+{
+    fprintf(fp, "{\n");
+    fprintf(fp,"Név:   %s\n",p.name);
+    fprintf(fp,"Cím:   %s\n",p.address);
+    int i = 0;
+    int reti = regcomp(&regex, "[a-zA-Z]", 0);
+    if (reti) 
+    {
+        fprintf(stderr, "Could not compile regex\n");
+        exit(1);
+    }
+    reti = regexec(&regex, p.days[i], 0, NULL, 0);
+    while (!reti)
+    {
+        fprintf(fp, "Nap: %s\n", p.days[i]);
+        ++i;
+        reti = regexec(&regex, p.days[i], 0, NULL, 0);
+    }
+    fprintf(fp, "}\n");
+}
+
 char** split(char* str, int row, int length)
 {
     char** re = (char**)malloc(sizeof(char*) * row);
@@ -122,7 +144,7 @@ void delete()
 
 }
 
-void openMenu(char c)
+void openMenu(char c, FILE* fp)
 {
     struct data person;
     switch (c)
@@ -130,6 +152,8 @@ void openMenu(char c)
     case 'a':
         person = add();
         dataPrint(person);
+        dataPrint_file(person, fp);
+        fprintf(fp, "korte");
         break;
     case 'm':
         /* code */
@@ -150,7 +174,7 @@ void openMenu(char c)
 int main()
 {
     FILE* fp;
-    fp = fopen("data.txt", "a+");
+    fp = fopen("data.txt", "r+");
     char c = ' ';
     do
     {
@@ -162,7 +186,7 @@ int main()
         else
         {
             printf("\nVálasztott menüpont: %c\n", c);  
-            openMenu(c);          
+            openMenu(c, fp);          
         }
         
         getchar();
