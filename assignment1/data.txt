@@ -1,0 +1,23 @@
+{
+Név:   Szép Nap
+Cím:   Felhő
+Nap: hétfő
+Nap: kedd
+}
+{
+Név:   Körte Szőlő
+Cím:   Város 4
+Nap: péntek
+Nap: szombat
+}
+{
+Név:   Alma Hold
+Cím:   Este Ég
+Nap: kedd
+}
+{
+Név:   Week End
+Cím:   Nice
+Nap: szombat
+Nap: vasárnap
+}
