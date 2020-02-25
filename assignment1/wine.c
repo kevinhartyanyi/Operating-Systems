@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <regex.h> 
+#include <unistd.h>
 
 regex_t regex;
 
@@ -53,7 +54,6 @@ void dataPrint(struct data p)
 
 void dataPrint_file(struct data p, FILE* fp)
 {
-    fprintf(fp, "{\n");
     fprintf(fp,"Név:   %s\n",p.name);
     fprintf(fp,"Cím:   %s\n",p.address);
     int i = 0;
@@ -70,7 +70,7 @@ void dataPrint_file(struct data p, FILE* fp)
         ++i;
         reti = regexec(&regex, p.days[i], 0, NULL, 0);
     }
-    fprintf(fp, "}\n");
+    fprintf(fp, "+++++++++++++++++++++++++++++++++++++\n");
 }
 
 char** split(char* str, int row, int length)
@@ -175,14 +175,257 @@ struct data add(struct days ava)
     return person;
 }
 
+char* prepConcat(char* addBegin, char* conCat)
+{
+    char tmp[100];
+    strcpy(tmp, addBegin);
+    char concat[100];
+    strcpy(concat, strcat(tmp, conCat));
+    return strcat(concat, "\n");
+}
+
 void change()
 {
+    printf("Kit szeretne módosítani (név)?\nNév:");
+    char name[20];
+    scanf("%20[^\n]%*c", name);
 
+    printf("Mit szeretne módosítani?\nn - Név\nc - Cím\na - Nap\n");
+    char ch;
+    scanf("%c", &ch);
+    clear();
+    if (ch != 'n' && ch != 'c' && ch != 'a')
+    {
+        printf("Rossz betűt adtál meg!\n");
+        getchar();
+        return;
+    }
+    char chData[100];
+    char cm;
+    if (ch == 'n' || ch == 'c')
+    {
+        printf("Mire szeretnéd módosítani?\nÚj: ");
+        scanf("%50[^\n]%*c", chData);
+    }
+    else
+    {
+        printf("Hozzáadni vagy eltávolítani szeretnél napot?\na - Adni\ne - Eltávolítani\n");        
+        scanf("%c", &cm);
+        clear();
+        if (cm != 'a' && cm != 'e')
+        {
+            printf("Rossz betűt adtál meg!\n");
+            getchar();
+            return;
+        }
+        else
+        {
+            if (cm == 'a')
+            {
+                printf("Mit szeretnél hozzáadni?\nÚj: ");
+                scanf("%50[^\n]%*c", chData);
+            }
+            else
+            {
+                printf("Mit szeretnél eltávolítani?\nNap: ");
+                scanf("%50[^\n]%*c", chData);
+            }          
+        }
+        
+    }
+    
+    FILE* reader;
+    char* line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    reader = fopen("data.txt", "r");
+    if (reader == NULL)
+        exit(EXIT_FAILURE);
+
+    FILE* write;
+    write = fopen("data2.txt", "w");
+    if (write == NULL)
+        exit(EXIT_FAILURE);
+
+    int found = 0;
+    int end = 0;
+    while ((read = getline(&line, &len, reader)) != -1) 
+    {
+        if(strstr(line, name) && strstr(line, "Név:"))
+        {
+            found = 1;
+            end = 1;
+            if (ch == 'n')
+            {
+                char cFinal[100];
+                strcpy(cFinal, prepConcat("Név: ", chData));
+                fprintf(write, cFinal);
+                end = 0;
+                continue;
+            }
+            
+        }
+
+        if(end == 0)
+        {
+            fprintf(write, line);
+        }
+        else if(strstr(line, "+++"))
+        {
+            fprintf(write, line);
+            end = 0;
+        }      
+        else if(end == 1)
+        {
+            if (ch == 'c' && strstr(line, "Cím:"))
+            {
+                char cFinal[100];
+                strcpy(cFinal, prepConcat("Cím: ", chData));
+                fprintf(write, cFinal);
+                end = 0;
+            }
+            else if(ch == 'a' && cm == 'a' && strstr(line, "Nap:"))
+            {
+                char cFinal[100];
+                strcpy(cFinal, prepConcat("Nap: ", chData));
+                fprintf(write, cFinal);
+                fprintf(write, line);
+                end = 0;
+            }
+            else if (ch == 'a' && cm == 'e' && strstr(line, "Nap:") && strstr(line, chData))
+            {
+                end = 0;
+            }
+            else
+            {
+                fprintf(write, line);
+            }      
+        }
+    }
+
+    if (found == 0)
+    {
+        printf("Nincs ilyen nevű jelentkező!\n");
+        unlink("data2.txt");
+    }
+    else
+    {
+        unlink("data.txt");
+        rename("data2.txt", "data.txt");
+    }
+    
+    
+
+    fclose(reader);
+    fclose(write);
+    if (line)
+        free(line);
 }
 
 void delete()
 {
+    printf("Kit szeretne törölni (név)?\nNév:");
+    char name[20];
+    scanf("%20[^\n]%*c", name);
 
+    FILE* reader;
+    char* line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    reader = fopen("data.txt", "r");
+    if (reader == NULL)
+        exit(EXIT_FAILURE);
+
+    FILE* write;
+    write = fopen("data2.txt", "w");
+    if (write == NULL)
+        exit(EXIT_FAILURE);
+
+    int found = 0;
+    int end = 0;
+    while ((read = getline(&line, &len, reader)) != -1) 
+    {
+        if(strstr(line, name) && strstr(line, "Név:"))
+        {
+            found = 1;
+            end = 1;
+        }
+
+        if(end == 0)
+        {
+            fprintf(write, line);
+        }
+        else if(strstr(line, "+++"))
+        {
+            end = 0;
+        }        
+    }
+
+    if (found == 0)
+    {
+        printf("Nincs ilyen nevű jelentkező!\n");
+        unlink("data2.txt");
+    }
+    else
+    {
+        unlink("data.txt");
+        rename("data2.txt", "data.txt");
+    }
+    
+    
+
+    fclose(reader);
+    fclose(write);
+    if (line)
+        free(line);
+}
+
+void dayList(char* dayL)
+{
+    printf("\nA %s-i napra jelentkezők:\n", dayL);
+
+    FILE* reader;
+    char* line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    reader = fopen("data.txt", "r");
+    if (reader == NULL)
+        exit(EXIT_FAILURE);
+
+    char name[100];
+    int any = 0;
+    while ((read = getline(&line, &len, reader)) != -1) 
+    {
+        if(strstr(line, "Név"))
+        {
+            strcpy(name, line);
+        }
+        else if(strstr(line, dayL))
+        {
+            printf("%s", name);
+            any = 1;
+        }
+    }
+
+    if (!any)
+    {
+        printf("Senki\n");
+    }
+    
+
+    fclose(reader);
+    if (line)
+        free(line);
+}
+
+void weekList()
+{
+    char checkDays[7][20] = {"hétfő", "kedd", "szerda", "csütörtök", "péntek", "szombat", "vasárnap"};
+    for (int i = 0; i < 7; i++)
+    {       
+        dayList(checkDays[i]);
+    }
 }
 
 
@@ -195,7 +438,10 @@ struct days readDays(struct days ava)
 
     reader = fopen("data.txt", "r");
     if (reader == NULL)
+    {
+        printf("Fájl: data.txt nem található!\n");
         exit(EXIT_FAILURE);
+    }
 
     while ((read = getline(&line, &len, reader)) != -1) 
     {
@@ -253,13 +499,19 @@ void openMenu(char c, FILE* fp, struct days ava)
         dataPrint_file(person, fp);
         break;
     case 'm':
-        /* code */
+        change();
         break;
     case 't':
-        /* code */
+        delete();
         break;
     case 'n':
-        /* code */
+        printf("Melyik nap-ról szeretnél listát?\n");
+        char d[20];
+        scanf("%20[^\n]%*c", d);        
+        dayList(d);
+        break;
+    case 'h':
+        weekList();
         break;
     
     default:

@@ -1,23 +1,21 @@
-{
-Név:   Szép Nap
-Cím:   Felhő
-Nap: hétfő
+Név: Alma Új
+Cím: Napocska
 Nap: kedd
-}
-{
-Név:   Körte Szőlő
-Cím:   Város 4
+Nap: hétfő
++++++++++++++++++++++++++++++++++++++
+Név:   Szép Nap
+Cím:   Nap
+Nap: péntek
+Nap: csütörtök
++++++++++++++++++++++++++++++++++++++
+Név:   Week End
+Cím:   WeekEnd
 Nap: péntek
 Nap: szombat
-}
-{
-Név:   Alma Hold
-Cím:   Este Ég
-Nap: kedd
-}
-{
-Név:   Week End
-Cím:   Nice
-Nap: szombat
 Nap: vasárnap
-}
++++++++++++++++++++++++++++++++++++++
+Név: Szőlőcske
+Cím:   Föld
+Nap: kedd
+Nap: szerda
++++++++++++++++++++++++++++++++++++++
