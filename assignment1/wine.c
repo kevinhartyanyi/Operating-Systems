@@ -112,9 +112,8 @@ char menu()
     q - kilépés\n");
     printf("Add meg a kívánt menüpontot: ");
 
-    scanf("%1[amtnhq]%c", &re);  
+    scanf("%c", &re);  
     clear();    
-
     return re;
 }
 
@@ -184,7 +183,7 @@ char* prepConcat(char* addBegin, char* conCat)
     return strcat(concat, "\n");
 }
 
-void change()
+void change(struct days ava)
 {
     printf("Kit szeretne módosítani (név)?\nNév:");
     char name[20];
@@ -224,6 +223,13 @@ void change()
             {
                 printf("Mit szeretnél hozzáadni?\nÚj: ");
                 scanf("%50[^\n]%*c", chData);
+                if (check(chData, "hétfő", ava.monday) || check(chData, "kedd", ava.tuesday) || check(chData, "szerda", ava.wendsday)
+                || check(chData, "csütörtök", ava.thursday) || check(chData, "péntek", ava.friday) || check(chData, "szombat", ava.saturday) || check(chData, "vasárnap", ava.sunday))
+                {
+                    printAvailable(ava); 
+                    printf("Olyan napot adtál meg, amire már nincs hely!\n");
+                    return;
+                }        
             }
             else
             {
@@ -499,7 +505,7 @@ void openMenu(char c, FILE* fp, struct days ava)
         dataPrint_file(person, fp);
         break;
     case 'm':
-        change();
+        change(ava);
         break;
     case 't':
         delete();
