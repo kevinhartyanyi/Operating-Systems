@@ -3,6 +3,9 @@
 #include <string.h>
 #include <regex.h> 
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+
 
 regex_t regex;
 
@@ -23,6 +26,14 @@ struct days
     int saturday;
     int sunday;
 };
+
+void getData(char* data, int size)
+{
+    char tmp[100];
+    fgets(tmp, size, stdin);
+    memcpy(data, &tmp[0], strlen(tmp)-1);
+	data[strlen(tmp)-1]='\0';
+}
 
 void printAvailable(struct days a)
 {
@@ -52,8 +63,50 @@ void dataPrint(struct data p)
     }
 }
 
-void dataPrint_file(struct data p, FILE* fp)
+void dataPrint_file(struct data p)
 {
+    struct flock lock;
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = 0;
+    lock.l_len = 0;
+    lock.l_pid = getpid();
+
+    int f = open("data.txt", O_RDWR | O_APPEND, 0600);
+    if (f == -1)
+    {
+        printf("Fájl megnyítási hiba.\n");
+        exit(1);
+    }
+    fcntl(f, F_SETLKW, &lock);
+    char* lineStart = "{\n";
+    char* lineEnd = "}\n";
+    write(f, lineStart, strlen(lineStart));
+    char* name = "Név: ";
+    write(f, name, strlen(name));
+    write(f, p.name, strlen(p.name));
+    write(f, "\n", 1);
+    char* address = "Cím: ";
+    write(f, address, strlen(address));
+    write(f, p.address, strlen(p.address));
+    write(f, "\n", 1);
+    
+
+    int i = 0;
+    while (strlen(p.days[i]) != 0 && i < 7)
+    {
+        char* day = "Nap: ";
+        write(f, day, strlen(day));
+        write(f, p.days[i], strlen(p.days[i]));
+        write(f, "\n", 1);
+        i++;
+    }
+    write(f, lineEnd, strlen(lineEnd));
+
+    close(f);
+    lock.l_type = F_UNLCK;
+    fcntl(f,F_SETLKW,&lock); //unlock file
+    /*
     fprintf(fp,"Név:   %s\n",p.name);
     fprintf(fp,"Cím:   %s\n",p.address);
     int i = 0;
@@ -70,7 +123,7 @@ void dataPrint_file(struct data p, FILE* fp)
         ++i;
         reti = regexec(&regex, p.days[i], 0, NULL, 0);
     }
-    fprintf(fp, "+++++++++++++++++++++++++++++++++++++\n");
+    fprintf(fp, "+++++++++++++++++++++++++++++++++++++\n");*/
 }
 
 char** split(char* str, int row, int length)
@@ -112,7 +165,7 @@ char menu()
     q - kilépés\n");
     printf("Add meg a kívánt menüpontot: ");
 
-    scanf("%c", &re);  
+    scanf(" %c", &re);  
     clear();    
     return re;
 }
@@ -132,12 +185,14 @@ struct data add(struct days ava)
     printAvailable(ava);    
 
     printf("Név(Maximum 20 karakter): ");
-    scanf("%20[^\n]%*c", name);
+    //scanf("%20[^\n]%*c", name);
+    getData(name, 20);
     printf("Megadott név: %s\n",name);
     clear();
 
     printf("\nCím(Maximum 50 karakter): ");
-    scanf("%50[^\n]%*c", address);
+    //scanf("%50[^\n]%*c", address);
+    getData(address, 50);
     printf("Megadott cím: %s\n",address);
     clear();
 
@@ -146,7 +201,8 @@ struct data add(struct days ava)
     do
     {
         printf("\nNapok(Maximum 100 karakter): ");
-        scanf("%50[^\n]%*c", days);
+        //scanf("%50[^\n]%*c", days);
+        getData(days, 50);
         printf("Megadott napok: %s\n",days);
         clear();
         right = 0;
@@ -185,13 +241,14 @@ char* prepConcat(char* addBegin, char* conCat)
 
 void change(struct days ava)
 {
-    printf("Kit szeretne módosítani (név)?\nNév:");
+    printf("Kit szeretne módosítani (név, 20)?\nNév:");
     char name[20];
-    scanf("%20[^\n]%*c", name);
+    //scanf("%20[^\n]%*c", name);
+    getData(name, 20);
 
     printf("Mit szeretne módosítani?\nn - Név\nc - Cím\na - Nap\n");
     char ch;
-    scanf("%c", &ch);
+    scanf(" %c", &ch);
     clear();
     if (ch != 'n' && ch != 'c' && ch != 'a')
     {
@@ -204,12 +261,13 @@ void change(struct days ava)
     if (ch == 'n' || ch == 'c')
     {
         printf("Mire szeretnéd módosítani?\nÚj: ");
-        scanf("%50[^\n]%*c", chData);
+        //scanf("%50[^\n]%*c", chData);
+        getData(chData, 50);
     }
     else
     {
         printf("Hozzáadni vagy eltávolítani szeretnél napot?\na - Adni\ne - Eltávolítani\n");        
-        scanf("%c", &cm);
+        scanf(" %c", &cm);
         clear();
         if (cm != 'a' && cm != 'e')
         {
@@ -222,7 +280,8 @@ void change(struct days ava)
             if (cm == 'a')
             {
                 printf("Mit szeretnél hozzáadni?\nÚj: ");
-                scanf("%50[^\n]%*c", chData);
+                //scanf("%50[^\n]%*c", chData);
+                getData(chData, 50);
                 if (check(chData, "hétfő", ava.monday) || check(chData, "kedd", ava.tuesday) || check(chData, "szerda", ava.wendsday)
                 || check(chData, "csütörtök", ava.thursday) || check(chData, "péntek", ava.friday) || check(chData, "szombat", ava.saturday) || check(chData, "vasárnap", ava.sunday))
                 {
@@ -234,29 +293,61 @@ void change(struct days ava)
             else
             {
                 printf("Mit szeretnél eltávolítani?\nNap: ");
-                scanf("%50[^\n]%*c", chData);
+                //scanf("%50[^\n]%*c", chData);
+                getData(chData,50);
             }          
         }
         
     }
-    
-    FILE* reader;
-    char* line = NULL;
-    size_t len = 0;
-    ssize_t read;
-    reader = fopen("data.txt", "r");
-    if (reader == NULL)
-        exit(EXIT_FAILURE);
 
-    FILE* write;
-    write = fopen("data2.txt", "w");
-    if (write == NULL)
+
+    struct flock lock;
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = 0;
+    lock.l_len = 0;
+    lock.l_pid = getpid();
+
+    int f = open("data.txt", O_RDONLY);
+    if (f == -1)
+    {
+        printf("Hiba a fájl megnyítása közben\n");
         exit(EXIT_FAILURE);
+    }
+    int fNew = open("data2.txt", O_RDWR | O_CREAT | O_EXCL, 0600);
+    if (fNew == -1)
+    {
+        printf("Hiba a fájl megnyítása közben\n");
+        exit(EXIT_FAILURE);
+    }
+
+    fcntl(f, F_SETLKW, &lock);
+    fcntl(fNew, F_SETLKW, &lock);
+
+    struct stat st;
+    stat("data.txt", &st);
+    long size = st.st_size;
+    char* file = malloc(size);    
+
+    read(f, file, size);
 
     int found = 0;
     int end = 0;
-    while ((read = getline(&line, &len, reader)) != -1) 
+    int pos = 0;
+    char prev[100];
+    while (pos < size - 1)
     {
+        int l = 0;
+        char line[100];
+        while (file[pos] != '\n')
+        {
+            line[l] = file[pos];            
+            ++pos; 
+            ++l;     
+        } 
+        line[l] = '\0';
+        ++pos;
+        
         if(strstr(line, name) && strstr(line, "Név:"))
         {
             found = 1;
@@ -265,7 +356,7 @@ void change(struct days ava)
             {
                 char cFinal[100];
                 strcpy(cFinal, prepConcat("Név: ", chData));
-                fprintf(write, cFinal);
+                write(fNew, cFinal, strlen(cFinal));
                 end = 0;
                 continue;
             }
@@ -274,11 +365,13 @@ void change(struct days ava)
 
         if(end == 0)
         {
-            fprintf(write, line);
+            write(fNew, line, strlen(line));
+            write(fNew, "\n", 1);
         }
-        else if(strstr(line, "+++"))
+        else if(strstr(line, "}"))
         {
-            fprintf(write, line);
+            write(fNew, line, strlen(line));
+            write(fNew, "\n", 1);
             end = 0;
         }      
         else if(end == 1)
@@ -287,15 +380,16 @@ void change(struct days ava)
             {
                 char cFinal[100];
                 strcpy(cFinal, prepConcat("Cím: ", chData));
-                fprintf(write, cFinal);
+                write(fNew, cFinal, strlen(cFinal));
                 end = 0;
             }
             else if(ch == 'a' && cm == 'a' && strstr(line, "Nap:"))
             {
                 char cFinal[100];
                 strcpy(cFinal, prepConcat("Nap: ", chData));
-                fprintf(write, cFinal);
-                fprintf(write, line);
+                write(fNew, cFinal, strlen(cFinal));
+                write(fNew, line, strlen(line));
+                write(fNew, "\n", 1);
                 end = 0;
             }
             else if (ch == 'a' && cm == 'e' && strstr(line, "Nap:") && strstr(line, chData))
@@ -304,10 +398,16 @@ void change(struct days ava)
             }
             else
             {
-                fprintf(write, line);
+                write(fNew, line, strlen(line));
+                write(fNew, "\n", 1);
             }      
         }
+
     }
+
+
+    close(f);
+    close(fNew);
 
     if (found == 0)
     {
@@ -318,54 +418,96 @@ void change(struct days ava)
     {
         unlink("data.txt");
         rename("data2.txt", "data.txt");
+        printf("Sikeres változtatás!\n");
     }
-    
-    
 
-    fclose(reader);
-    fclose(write);
-    if (line)
-        free(line);
+    lock.l_type = F_UNLCK;
+    fcntl(f, F_SETLKW, &lock);
+    fcntl(fNew, F_SETLKW, &lock);
+    free(file);
+    //clear();
 }
 
 void delete()
 {
-    printf("Kit szeretne törölni (név)?\nNév:");
+    printf("Kit szeretne törölni (név, 20)?\nNév:");
     char name[20];
-    scanf("%20[^\n]%*c", name);
+    //scanf("%20[^\n]%*c", name);
+    getData(name, 20);
 
-    FILE* reader;
-    char* line = NULL;
-    size_t len = 0;
-    ssize_t read;
-    reader = fopen("data.txt", "r");
-    if (reader == NULL)
-        exit(EXIT_FAILURE);
+    struct flock lock;
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = 0;
+    lock.l_len = 0;
+    lock.l_pid = getpid();
 
-    FILE* write;
-    write = fopen("data2.txt", "w");
-    if (write == NULL)
+    int f = open("data.txt", O_RDONLY);
+    if (f == -1)
+    {
+        printf("Hiba a fájl megnyítása közben\n");
         exit(EXIT_FAILURE);
+    }
+    int fNew = open("data2.txt", O_RDWR | O_CREAT | O_EXCL, 0600);
+    if (fNew == -1)
+    {
+        printf("Hiba a fájl megnyítása közben\n");
+        exit(EXIT_FAILURE);
+    }
+
+    fcntl(f, F_SETLKW, &lock);
+    fcntl(fNew, F_SETLKW, &lock);
+
+    struct stat st;
+    stat("data.txt", &st);
+    long size = st.st_size;
+    char* file = malloc(size);    
+
+    read(f, file, size);
 
     int found = 0;
     int end = 0;
-    while ((read = getline(&line, &len, reader)) != -1) 
+    int pos = 0;
+    char prev[100];
+    while (pos < size - 1)
     {
+        int l = 0;
+        char line[100];
+        while (file[pos] != '\n')
+        {
+            line[l] = file[pos];            
+            ++pos; 
+            ++l;     
+        } 
+        line[l] = '\0';
+        ++pos;
+
         if(strstr(line, name) && strstr(line, "Név:"))
         {
             found = 1;
             end = 1;
         }
-
-        if(end == 0)
+        else if (strstr(line, "Név:"))
         {
-            fprintf(write, line);
+            write(fNew, "{\n", 2);
         }
-        else if(strstr(line, "+++"))
+        
+
+        if(end == 0 && !strstr(line, "{"))
+        {
+            write(fNew, line, strlen(line));
+            write(fNew, "\n", 1);
+        }
+        else if(strstr(line, "}"))
         {
             end = 0;
-        }        
+        }   
     }
+    //write(fNew, "}\n", 2);
+
+
+    close(f);
+    close(fNew);
 
     if (found == 0)
     {
@@ -376,53 +518,78 @@ void delete()
     {
         unlink("data.txt");
         rename("data2.txt", "data.txt");
+        printf("Sikeres törlés!\n");
     }
-    
-    
 
-    fclose(reader);
-    fclose(write);
-    if (line)
-        free(line);
+    lock.l_type = F_UNLCK;
+    fcntl(f, F_SETLKW, &lock);
+    fcntl(fNew, F_SETLKW, &lock);
+    free(file);
+
 }
 
 void dayList(char* dayL)
 {
     printf("\nA %s-i napra jelentkezők:\n", dayL);
 
-    FILE* reader;
-    char* line = NULL;
-    size_t len = 0;
-    ssize_t read;
+    struct flock lock;
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = 0;
+    lock.l_len = 0;
+    lock.l_pid = getpid();
 
-    reader = fopen("data.txt", "r");
-    if (reader == NULL)
+    int f = open("data.txt", O_RDONLY);
+    if (f == -1)
+    {
+        printf("Hiba a fájl megnyítása közben\n");
         exit(EXIT_FAILURE);
+    }
+    fcntl(f, F_SETLKW, &lock);
+
+    struct stat st;
+    stat("data.txt", &st);
+    long size = st.st_size;
+    char* file = malloc(size);    
+
+    read(f, file, size);
+
+    close(f);
+    lock.l_type = F_UNLCK;
+    fcntl(f, F_SETLKW, &lock);
 
     char name[100];
     int any = 0;
-    while ((read = getline(&line, &len, reader)) != -1) 
+    int pos = 0;
+    while (pos < size - 10)
     {
+        int l = 0;
+        char line[100];
+        while (file[pos] != '\n')
+        {
+            line[l] = file[pos];            
+            ++pos; 
+            ++l;     
+        } 
+        line[l] = '\0';
+        ++pos;
         if(strstr(line, "Név"))
         {
             strcpy(name, line);
         }
         else if(strstr(line, dayL))
         {
-            printf("%s", name);
+            printf("%s\n", name);
             any = 1;
         }
     }
+
 
     if (!any)
     {
         printf("Senki\n");
     }
-    
-
-    fclose(reader);
-    if (line)
-        free(line);
+    free(file);
 }
 
 void weekList()
@@ -437,59 +604,107 @@ void weekList()
 
 struct days readDays(struct days ava)
 {
-    FILE* reader;
-    char* line = NULL;
-    size_t len = 0;
-    ssize_t read;
+    struct flock lock;
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = 0;
+    lock.l_len = 0;
+    lock.l_pid = getpid();
 
-    reader = fopen("data.txt", "r");
-    if (reader == NULL)
+    int f = open("data.txt", O_RDONLY);
+    if (f == -1)
     {
-        printf("Fájl: data.txt nem található!\n");
+        printf("Hiba a fájl megnyítása közben\n");
         exit(EXIT_FAILURE);
     }
+    fcntl(f, F_SETLKW, &lock);
 
-    while ((read = getline(&line, &len, reader)) != -1) 
+    struct stat st;
+    stat("data.txt", &st);
+    long size = st.st_size;
+    char* file = malloc(size);
+    char entry[200];
+    
+
+    read(f, file, size);
+
+    close(f);
+    lock.l_type = F_UNLCK;
+    fcntl(f, F_SETLKW, &lock);
+
+    int pos = 0;
+    while (pos < size - 10)
     {
-        if (strstr(line, "hétfő"))
+        memset(entry, 0, 200);
+        while (file[pos] != '{')
         {
-            ava.monday -= 1;
+            ++pos;
         }
-        else if (strstr(line, "kedd"))
-        {
-            ava.tuesday -= 1;
-        }
-        else if (strstr(line, "szerda"))
-        {
-            ava.wendsday -= 1;
-        }
-        else if (strstr(line, "csütörtök"))
-        {
-            ava.thursday -= 1;
-        }
-        else if (strstr(line, "péntek"))
-        {
-            ava.friday -= 1;
-        }
-        else if (strstr(line, "szombat"))
-        {
-            ava.saturday -= 1;
-        }
-        else if (strstr(line, "vasárnap"))
-        {
-            ava.sunday -= 1;
-        }
-    }
+        pos += 2; // { \n
 
-    fclose(reader);
-    if (line)
-        free(line);
-        
+        int i = 0;
+        while (file[pos] != '}')
+        {
+            entry[i] = file[pos];
+            ++i;
+            ++pos;
+        }
+        int j = 0;
+        int l = 0;
+        char line[100];
+        while (entry[j] != '\0')
+        {
+            if (entry[j] == '\n')
+            {   
+                //printf("%s\n", &line[1]);
+                if (strstr(&line[1], "hétfő"))
+                {
+                    ava.monday -= 1;
+                }
+                else if (strstr(&line[1], "kedd"))
+                {
+                    ava.tuesday -= 1;
+                }
+                else if (strstr(&line[1], "szerda"))
+                {
+                    ava.wendsday -= 1;
+                }
+                else if (strstr(&line[1], "csütörtök"))
+                {
+                    ava.thursday -= 1;
+                }
+                else if (strstr(&line[1], "péntek"))
+                {
+                    ava.friday -= 1;
+                }
+                else if (strstr(&line[1], "szombat"))
+                {
+                    ava.saturday -= 1;
+                }
+                else if (strstr(&line[1], "vasárnap"))
+                {
+                    ava.sunday -= 1;
+                }
+                memset(line, 0, 100);
+                l = 0;
+            }
+            else
+            {
+                line[l] = entry[j];
+            } 
+            
+            ++j; 
+            ++l;     
+        } 
+    }
+    
+    free(file);
+
     return ava;        
 }
 
 
-void openMenu(char c, FILE* fp, struct days ava)
+void openMenu(char c, struct days ava)
 {
     struct data person;
     switch (c)
@@ -502,7 +717,7 @@ void openMenu(char c, FILE* fp, struct days ava)
         }
         person = add(ava);
         dataPrint(person);
-        dataPrint_file(person, fp);
+        dataPrint_file(person);
         break;
     case 'm':
         change(ava);
@@ -511,9 +726,11 @@ void openMenu(char c, FILE* fp, struct days ava)
         delete();
         break;
     case 'n':
-        printf("Melyik nap-ról szeretnél listát?\n");
+        printf("Melyik nap-ról szeretnél listát?(20)\n");
         char d[20];
-        scanf("%20[^\n]%*c", d);        
+        //scanf("%20[^\n]%*c", d);  
+        getData(d, 20);  
+        //clear();    
         dayList(d);
         break;
     case 'h':
@@ -531,35 +748,34 @@ int main()
         1, 2, 3, 4, 5, 6, 7
     };
     struct days nowAvailable;
-    nowAvailable = readDays(startAvailable);
-    printAvailable(nowAvailable);
-    FILE* writer;
-    writer = fopen("data.txt", "a");
-    if (writer == NULL)
+    int writer = open("data.txt", O_WRONLY | O_CREAT, 0600);
+    if (writer == -1)
     {
-        printf("Fájl nem található!\n");
+        printf("Fájl megnyítási hiba1!\n");
         exit(EXIT_FAILURE);
     }
-    setlinebuf(writer);
+
+    nowAvailable = readDays(startAvailable);
+    printAvailable(nowAvailable);
     char c = ' ';
     do
     {
         nowAvailable = readDays(startAvailable);
         c = menu();
-        if (c == '\0')
+        if (c != 'a' && c != 'm' && c != 't' && c != 'n' && c != 'h' && c != 'q')
         {
             printf("\nHibás menüpont! Kérem válasszon a felsorolt menüpontok közül.\n");
         }
         else
         {
             printf("\nVálasztott menüpont: %c\n", c);  
-            openMenu(c, writer, nowAvailable);          
+            openMenu(c, nowAvailable);  
+            clear();        
         }
         
         getchar();
     } while (c != 'q');
     
-    fclose(writer);
 
     return 0;
 }

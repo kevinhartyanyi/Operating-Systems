@@ -1,21 +1,24 @@
-Név: Alma Új
-Cím: Napocska
-Nap: kedd
+{
+Név: Alma
+Cím: A
 Nap: hétfő
-+++++++++++++++++++++++++++++++++++++
-Név:   Szép Nap
-Cím:   Nap
-Nap: péntek
-Nap: csütörtök
-+++++++++++++++++++++++++++++++++++++
-Név:   Week End
-Cím:   WeekEnd
-Nap: péntek
-Nap: szombat
-Nap: vasárnap
-+++++++++++++++++++++++++++++++++++++
-Név: Szőlőcske
-Cím:   Föld
 Nap: kedd
 Nap: szerda
-+++++++++++++++++++++++++++++++++++++
+}
+{
+Név: Város
+Cím: Víz Város
+Nap: kedd
+Nap: péntek
+}
+{
+Név: Week End
+Cím: End
+Nap: szerda
+Nap: szombat
+}
+{
+Név: Szőlő
+Cím: Gyümölcs Város
+Nap: szombat
+}
