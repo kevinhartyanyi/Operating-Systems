@@ -1,0 +1,30 @@
+{
+Név: Week End
+Cím: End
+Nap: szerda
+Nap: szombat
+}
+{
+Név: Szőlő
+Cím: Gyümölcs Város
+Nap: szombat
+}
+{
+Név: Alma
+Cím: Folyó
+Nap: kedd
+Nap: hétfő
+Nap: vasárnap
+}
+{
+Név: Tavasz
+Cím: Kert
+Nap: kedd
+Nap: szerda
+}
+{
+Név: Madár
+Cím: Ég
+Nap: szerda
+Nap: csütörtök
+}
